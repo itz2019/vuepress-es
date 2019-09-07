@@ -71,19 +71,16 @@ const binHeaderFn = cmd => {
             // })
         },
 
-        server () {
-            console.log('启动项目预览（功能暂未开放）')
-        },
-
-        build () {
-
+        serve () {
+            
             let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
             createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
 
 
-            const spinner = ora('vpe正在启动编译中...')
+            const spinner = ora('vpe正在启动预览功能...')
             spinner.start()
 
+            // 暂停 1s，主要是有个加载状态，装B用 😸
             setTimeout(() => {
                 let npmList = shelljs.exec('npm list --dept 0') // 首先判断是否安装了VuePress
                 let isNpmVuePress = /vuepress@/.test(npmList)
@@ -95,7 +92,31 @@ const binHeaderFn = cmd => {
                     console.log('❣️  您还未安装 vuepress（npm install vuepress --save） ')
                     spinner.stop()
                 }
-            }, 300)
+            }, 1000)
+        },
+
+        build () {
+
+            let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
+            createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
+
+
+            const spinner = ora('vpe正在编译中（编译后的文件在 build/.vuepress/dist 中）')
+            spinner.start()
+
+            // 暂停 1s，主要是有个加载状态，装B用 😸
+            setTimeout(() => {
+                let npmList = shelljs.exec('npm list --dept 0') // 首先判断是否安装了VuePress
+                let isNpmVuePress = /vuepress@/.test(npmList)
+    
+                if (isNpmVuePress) {
+                    shelljs.exec('npx vuepress build build') // 执行sh脚本
+                    spinner.stop()
+                } else {
+                    console.log('❣️  您还未安装 vuepress（npm install vuepress --save） ')
+                    spinner.stop()
+                }
+            }, 1000)
             
         }
     
@@ -117,7 +138,7 @@ __   __  _ __     ___
 说明：.md ---> .html（简化VuePress配置）
 
 - vpe init 生成初始化项目（并启动项目预览）
-- vpe server 启动项目预览
+- vpe serve 启动项目预览
 - vpe build 打包生成 html 文件
 
 `
