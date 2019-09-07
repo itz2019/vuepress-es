@@ -80,9 +80,22 @@ const binHeaderFn = cmd => {
             let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
             createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
 
+
+            const spinner = ora('vpe正在启动编译中...')
+            spinner.start()
+
             setTimeout(() => {
-                shelljs.exec('npx vuepress dev build') // 执行sh脚本
-            }, 100)
+                let npmList = shelljs.exec('npm list --dept 0') // 首先判断是否安装了VuePress
+                let isNpmVuePress = /vuepress@/.test(npmList)
+    
+                if (isNpmVuePress) {
+                    shelljs.exec('npx vuepress dev build') // 执行sh脚本
+                    spinner.stop()
+                } else {
+                    console.log('❣️  您还未安装 vuepress（npm install vuepress --save） ')
+                    spinner.stop()
+                }
+            }, 300)
             
         }
     

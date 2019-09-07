@@ -1,7 +1,10 @@
 {
   "name": "vuepress-es",
-  "version": "1.0.0",
-  "description": "<p align=\"center\">   <img width=\"180\" src=\"https://raw.githubusercontent.com/vuejs/vuepress/master/packages/docs/docs/.vuepress/public/hero.png\" alt=\"logo\"> </p>",
+  "version": "1.0.1",
+  "description": "vuepress-es 可以让你快速使用vuepress，而不需要配置",
+  "Keywords": [
+    "vuepress"
+  ],
   "main": "./src/bin/VuePressEs",
   "bin": {
     "vpe": "./src/bin/VuePressEs"
