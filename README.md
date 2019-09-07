@@ -3,17 +3,17 @@
 </p>
 
 <p align="center">
-    <a href="javascript:;"><img src="https://img.shields.io/github/license/itz2019/vuepress-es" alt="LICENSE"></a>
     <a href="https://www.npmjs.com/package/vuepress-es"><img src="https://img.shields.io/npm/v/vuepress-es" alt="npm版本号"></a>
+    <a href="javascript:;"><img src="https://img.shields.io/npm/dw/vuepress-es" alt="每周下载量"></a>
+    <a href="javascript:;"><img src="https://img.shields.io/github/license/itz2019/vuepress-es" alt="LICENSE"></a>
     <a href="javascript:;"><img src="https://img.shields.io/github/repo-size/itz2019/vuepress-es" alt="repo-size"></a>
-    <a href="javascript:;"><img src="https://img.shields.io/github/last-commit/itz2019/vuepress-es" alt="最后一次提交"></a>
 </p>
 
 <h2 align="center">vuepress-es 可以让你快速使用vuepress，而不需要配置</h2>
 
 VuePress是一个非常好的 静态网站生成器，我也使用这个构建了笔记文档，本着效率至上的原则，但是我感觉配置过程还可以再一步省略，提高生产效率。于是就有了本项目。
 
-本项目适合快速建立简单的结构，如果你懂VuePress配置，并且需要的配置很多，那么可以在本项目生成简单结构的基础上，进行拓展。
+本项目适合快速建立简单的结构，如果你懂VuePress配置，并且需要的配置很多，那么可以在本项目生成简单结构的基础上，进行快速拓展。
 
 - [VuePress官网](https://vuepress.vuejs.org/zh/)
 - [作者个人笔记博客](https://zhukunpenglinyutong.github.io/)
