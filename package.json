@@ -10,7 +10,7 @@
     "test": "test"
   },
   "scripts": {
-    "dev": "node app.js; vuepress dev docs",
+    "dev": "vuepress dev ./notes/build",
     "build": "node app.js; vuepress build docs"
   },
   "repository": {
@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/itz2019/vuepress-es#readme",
   "devDependencies": {
-    "vuepress": "^1.0.3"
+    "vuepress": "^1.0.4"
   },
   "dependencies": {
     "@darkobits/lolcatjs": "^3.1.3",

@@ -5,6 +5,9 @@ const Printer = require('@darkobits/lolcatjs') // 字体渐变（美观用，没
 const inquirer = require('inquirer') // 跟用户进行交互
 const ora = require('ora') // loading模块
 const shelljs = require('shelljs'); // 前端写shell
+const fs = require('fs');
+const path = require('path');
+let stat = fs.stat;
 
 // 初始化函数
 function init () {
@@ -37,42 +40,50 @@ const binHeaderFn = cmd => {
 
         // 初始化项目集合
         init () {
-            inquirer.prompt([
-                {
-                    type: 'text',
-                    message: '此操作会在当前路径下创建初始化文件夹，请您自定义此文件夹名称（英文）',
-                    name: 'dirname'
-                }
-            ]).then( answers => {
+            console.log('生成一个初始化项目（功能暂未开放）')
+            // inquirer.prompt([
+            //     {
+            //         type: 'text',
+            //         message: '此操作会在当前路径下创建初始化文件夹，请您自定义此文件夹名称（英文）',
+            //         name: 'dirname'
+            //     }
+            // ]).then( answers => {
                 
-                let { dirname } = answers
+            //     let { dirname } = answers
                 
-                const spinner = ora('vpe正在为您初始化项目')
-                spinner.start()
+            //     const spinner = ora('vpe正在为您初始化项目')
+            //     spinner.start()
 
-                let initCreateAppJs = initCreateAppJsFn(dirname) // 生成初始化 init app.js
-                shelljs.echo(initCreateAppJs).to('app.js')
+            //     let initCreateAppJs = initCreateAppJsFn(dirname) // 生成初始化 init app.js
+            //     shelljs.echo(initCreateAppJs).to('app.js')
 
-                setTimeout( () => {
+            //     setTimeout( () => {
                     
-                    shelljs.cd(shelljs.pwd().stdout) // 进入当前目录
-                    shelljs.mkdir(dirname)
+            //         shelljs.cd(shelljs.pwd().stdout) // 进入当前目录
+            //         shelljs.mkdir(dirname)
 
-                    shelljs.exec('node app.js')
-                    shelljs.exec('npx vuepress dev docs')
+            //         shelljs.exec('node app.js')
+            //         shelljs.exec('npx vuepress dev docs')
                     
-                    spinner.stop()
-                    console.log('初始化完成')
-                }, 1000)
-            })
+            //         spinner.stop()
+            //         console.log('初始化完成')
+            //     }, 1000)
+            // })
         },
 
         server () {
-            console.log('启动项目预览')
+            console.log('启动项目预览（功能暂未开放）')
         },
 
         build () {
-            console.log('打包生成 html 文件')
+
+            let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
+            createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
+
+            setTimeout(() => {
+                shelljs.exec('npx vuepress dev build') // 执行sh脚本
+            }, 100)
+            
         }
     
     }
@@ -115,6 +126,10 @@ features:
   details: 解释三内容
 footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（示例）
 ---`
+}
+
+function recordFn () {
+    return `# 成功`
 }
 
 // init 时候生成的 app.js
@@ -256,8 +271,6 @@ function copyT (src, dst) {
   });
 }
 
-
-
 // 删除文件夹
 function delDirT (path){
     let files = [];
@@ -278,5 +291,240 @@ function delDirT (path){
 init() // 启动`
 
 }
+
+// 遍历文件夹，生成文件对象树
+function readDirToObjTree(){
+    
+    let foldPath = shelljs.pwd().stdout // 当前目录的绝对路径
+    let objTree = []
+
+    function recursion (foldPath, data, isRootPath = true) {
+
+        let files = fs.readdirSync(foldPath)
+        // console.log('1️⃣ 读取某个目录下的目录结构', files)
+        
+        // 1.目录循环
+        files.forEach(item => {
+            // 如果有配置表，这里还需要进行配置过滤一下
+
+            let isDir = fs.statSync(`${foldPath}/${item}`).isDirectory()
+            // console.log(`❣️ ${item} 是否是 文件夹`, isDir)
+
+            // 核心数据处理
+            if (isDir && item !==  'node_modules' && item !==  'build') {
+                // console.log('🔥 可以进入到生成目录的文件夹', item)
+                data.push({
+                    name: item,
+                    data: [],
+                    path: `${foldPath}/${item}`
+                })
+            } else if (!isRootPath) {
+                // console.log('✅ 不是文件夹，并且不是第一级', item)
+                data.push(item)
+            }
+
+        })
+
+        // 2.遍历目录循环（递归）
+        data.length > 0 && data[0].name !== undefined 
+            ? data.forEach(item => recursion(item.path, item.data, false)) 
+            : ''
+    }
+
+    recursion(foldPath, objTree)
+
+    return objTree
+}
+
+// **************** 根据文档对象树 生成 build *************
+// 生成VuePress规则
+function createVuePressInit (objTree) {
+    createDist() // 创建打包之后的目录
+    copyDirFn(objTree) // 复制文件
+    createVuePressConfig(objTree) // 根据文件对象树，生成VuePress规则
+    createBasicFile(objTree) // 生成README.md 文件，不写的话会有问题
+}
+
+// 1.创建打包之后的目录build
+function createDist () {
+    
+    let dirPath = shelljs.pwd().stdout
+
+    // 如果有和打包名称一致的名称，就先删除掉
+    if (fs.existsSync(path.join(dirPath, "build"))) {
+        delDir(path.join(dirPath, "build"))
+    }
+
+    // 创建目录
+    fs.mkdirSync(path.join(dirPath, "build"))
+    fs.mkdirSync(path.join(dirPath, `./build/.vuepress`))
+    console.log('1️⃣  创建打包文件夹成功')
+
+}
+
+// 2.复制文件夹到build
+function copyDirFn (objTree) {
+    objTree.forEach(item => {
+        let dirPath = shelljs.pwd().stdout
+        // console.log(item.path)
+        // console.log(`${dirPath}/build/${item.name}`)        
+        exists(item.path, `${dirPath}/build/${item.name}`, copy)
+    })
+    console.log('2️⃣  复制文件到打包目录完成')
+}
+
+// 3.生成VuePress规则
+function createVuePressConfig (objTree) {
+
+    let nav = ''
+    let sidebar = ''
+
+    objTree.forEach(item => {
+
+        // 1.生成导航
+        nav += `
+            {
+                text: '${item.name}',
+                link: '/${item.name}/'
+            },
+        `;
+
+        // 2.生成侧边栏
+        
+        // 首先先循环本层的二级目录
+        let twLevel = ''
+        item.data.forEach(jtem => {
+
+            let children = ''
+            jtem.data.forEach(ztem => {
+                children += `'${item.name}/${jtem.name}/${ztem}',
+                        `
+            })
+
+            twLevel += `
+                {
+                    title: '${jtem.name}',
+                    children: [
+                        ${children}
+                    ]
+                },
+            `
+        })
+
+        // 拼接
+        sidebar += `
+            '/${item.name}': [
+                ${twLevel}
+            ],
+        `
+
+    })
+
+let configStr = `module.exports = {
+    title: 'Notes',
+    description: '知识速查（了不起的个人工具库）',
+    head: [
+        ['link', { rel: 'icon', href: '/favicon.ico' }]
+    ],
+    themeConfig: {
+        repo: 'https://github.com/zhukunpenglinyutong/notes',
+        //导航
+        nav: [
+            ${nav}
+        ],
+        // 侧边栏
+        sidebar: {
+            ${sidebar}
+        }
+    },
+    serviceWorker: true,
+    markdown: {
+        lineNumbers: true // 开启行号
+    }
+}`
+    let dirPath = shelljs.pwd().stdout
+    fs.writeFileSync(`${dirPath}/build/.vuepress/config.js`, configStr)
+    console.log('3️⃣  根据文件对象树，生成VuePress规则完成')
+}
+
+// 4.生成README.md文件（异步）
+function createBasicFile (objTree) {
+    
+    // 在打包文件夹根目录 生成 README.md 要不会vuepress会产生404
+    let homeTile = homeTileFn()
+    let dirPath = shelljs.pwd().stdout
+    fs.writeFileSync(`${dirPath}/build/README.md`, homeTile)
+
+    setTimeout(() => {
+        // 在打包文件夹 每个分类文件夹下 生成 README.md，否则内容显示不出来
+        let record = recordFn()
+        objTree.forEach(item => {
+            // console.log('🔥', `${dirPath}/build/${item.name}/README.md`)
+            fs.writeFileSync(`${dirPath}/build/${item.name}/README.md`, record)
+        })
+        console.log('4️⃣  生成README.md 文件完成')
+
+    }, 100);
+}
+
+// 复制文件夹（工具函数）
+function exists (src, dst, callback) {
+    //测试某个路径下文件是否存在
+    fs.exists(dst, function(exists){
+        if (exists) {//不存在
+            callback(src,dst);
+        } else {//存在
+            fs.mkdir(dst,function(){//创建目录
+                callback(src,dst)
+            })
+        }
+    })
+}
+
+// 复制文件夹的辅助函数（工具函数）
+function copy (src, dst) {
+    //读取目录
+    let paths = fs.readdirSync(src);
+    paths.forEach(function(path){
+        var _src=src+'/'+path;
+        var _dst=dst+'/'+path;
+        var readable;
+        var writable;
+        stat(_src,function(err,st){
+            if(err){
+                throw err;
+            }
+            
+            if(st.isFile()){
+                readable=fs.createReadStream(_src);//创建读取流
+                writable=fs.createWriteStream(_dst);//创建写入流
+                readable.pipe(writable);
+            }else if(st.isDirectory()){
+                exists(_src,_dst,copy);
+            }
+        });
+    });
+}
+  
+// 删除文件夹（工具函数）
+function delDir(path){
+    let files = [];
+    if(fs.existsSync(path)){
+        files = fs.readdirSync(path);
+        files.forEach((file, index) => {
+            let curPath = path + "/" + file;
+            if(fs.statSync(curPath).isDirectory()){
+                delDir(curPath); //递归删除文件夹
+            } else {
+                fs.unlinkSync(curPath); //删除文件
+            }
+        });
+        fs.rmdirSync(path);
+    }
+}
+
+
+// 一般来说会遍历 文件下所有的文件，生成结构，如果你想有文件夹不参与生成结构，可以进行配置
+// vpe.config.js
 
 init()

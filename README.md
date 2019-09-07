@@ -9,7 +9,7 @@
     <a href="javascript:;"><img src="https://img.shields.io/github/last-commit/itz2019/vuepress-es" alt="最后一次提交"></a>
 </p>
 
-<h2 align="center">使用vuepress-es来节省你的时间</h2>
+<h2 align="center">使用vuepress-es来节省你的时间（未完成）</h2>
 
 VuePress是一个非常好的 静态网站生成器，我也使用这个构建了笔记文档，本着效率至上的原则，但是我感觉配置过程还可以再一步省略，提高生产效率。于是就有了本项目
 
@@ -27,6 +27,16 @@ git clone https://github.com/itz2019/vuepress-es.git
 # 安装依赖
 npm install
 
-# 使用
+# 安装 vuepress-es
 sudo npm link
+
+# 使用（在一个新的文件夹下进行）
+vpe build # 生成打包之后的文件
 ```
+
+---
+
+## 第一版功能说明
+
+第一版要实现的就是 建立文件夹，和.md文件，就能生成网站，用户不用管如何去配置的问题
+
