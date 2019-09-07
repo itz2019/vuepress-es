@@ -1,0 +1,282 @@
+#!/usr/bin/env node
+
+const program = require('commander') // 核心命令行工具
+const Printer = require('@darkobits/lolcatjs') // 字体渐变（美观用，没啥其他用处，主要是花里胡哨）
+const inquirer = require('inquirer') // 跟用户进行交互
+const ora = require('ora') // loading模块
+const shelljs = require('shelljs'); // 前端写shell
+
+// 初始化函数
+function init () {
+    programConfigFn() // 核心命令行配置函数
+}
+
+// 核心命令行配置函数
+function programConfigFn () {
+    
+    // -v 版本
+    program.version('v1.0.0', "-v, --version")
+    // -h 帮助
+    program.on('--help', () => { console.log(Printer.default.fromString(titleFu())) });
+
+    program
+        .usage("[cmd] <options>")
+        .arguments('<cmd> [env]')
+        .action( (cmd, otherParms) => {
+            let header = binHeaderFn(cmd)
+            typeof header === 'undefined' ? process.exit(1) : header()
+        })
+
+    program.parse(process.argv)
+}
+
+// 命令集合函数
+const binHeaderFn = cmd => {
+    
+    let binHeader = {
+
+        // 初始化项目集合
+        init () {
+            inquirer.prompt([
+                {
+                    type: 'text',
+                    message: '此操作会在当前路径下创建初始化文件夹，请您自定义此文件夹名称（英文）',
+                    name: 'dirname'
+                }
+            ]).then( answers => {
+                
+                let { dirname } = answers
+                
+                const spinner = ora('vpe正在为您初始化项目')
+                spinner.start()
+
+                let initCreateAppJs = initCreateAppJsFn(dirname) // 生成初始化 init app.js
+                shelljs.echo(initCreateAppJs).to('app.js')
+
+                setTimeout( () => {
+                    
+                    shelljs.cd(shelljs.pwd().stdout) // 进入当前目录
+                    shelljs.mkdir(dirname)
+
+                    shelljs.exec('node app.js')
+                    shelljs.exec('npx vuepress dev docs')
+                    
+                    spinner.stop()
+                    console.log('初始化完成')
+                }, 1000)
+            })
+        },
+
+        server () {
+            console.log('启动项目预览')
+        },
+
+        build () {
+            console.log('打包生成 html 文件')
+        }
+    
+    }
+
+    return binHeader[cmd]
+
+}
+
+// title文字
+function titleFu () {
+return `
+__   __  _ __     ___ 
+\\ \\ / / | '_ \\   / _ \\
+ \\ V /  | |_) | |  __/
+  \\_/   | .__/   \\___|
+        |_|                                                                   
+
+说明：.md ---> .html（简化VuePress配置）
+
+- vpe init 生成初始化项目（并启动项目预览）
+- vpe server 启动项目预览
+- vpe build 打包生成 html 文件
+
+`
+}
+
+// 生成首页文字函数
+function homeTileFn (dirname) {
+return `---
+home: true
+heroImage: https://itzkp-1253302184.cos.ap-beijing.myqcloud.com/github%E5%9B%BE%E7%89%87/notes/3.png
+actionText: 🔥 这里是个按钮 →
+actionLink: /${dirname}/
+features:
+- title: 解释一
+  details: 解释一内容
+- title: 解释二
+  details: 解释二内容
+- title: 解释三
+  details: 解释三内容
+footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（示例）
+---`
+}
+
+// init 时候生成的 app.js
+function initCreateAppJsFn (dirname) {
+
+let homeTile = homeTileFn(dirname)
+
+return `let fs = require("fs");
+let path = require('path')
+let stat = fs.stat;
+
+// 同步读取
+let homeTile = \`${homeTile}\`
+
+function init() {
+        
+    // 1.判断如果有docs目录，就删除掉 docs目录
+    if (fs.existsSync(path.join(__dirname,'docs'))) {
+        delDirT(path.join(__dirname,'docs'))
+    }
+
+    // 2.创建目录
+    fs.mkdirSync(path.join(__dirname, 'docs'))
+    fs.mkdirSync(path.join(__dirname, './docs/.vuepress'))
+
+    // 2.5 将 record.md 内容复制到 文件下，防止报404（异步）
+    fs.readFile('record.md', function (err, data) {
+        fs.writeFile('./docs/${dirname}/README.md', data,  function(err) {
+          if (err) {
+              return console.error(err);
+          }
+        });
+    })
+
+    // 3.文件夹复制
+    existsT('./${dirname}','./docs/${dirname}',copyT)
+
+    // 4.生成 README.md 要不会首页会报404
+    fs.writeFileSync('./docs/README.md', homeTile)
+    
+    // 5.遍历 生成路径导航（生成规则写入 config.js中）
+    let strOne = ''
+    let one = fs.readdirSync('./${dirname}')
+    one.forEach(item => {
+        if (!/.md/.${dirname}(item) && item !== '.DS_Store') {
+    
+          let files2 = []
+          let files2Str = ''
+          fs.readdirSync(path.join('./${dirname}', item)).forEach( item1 => {
+            // Mac系统下的问题
+            if (item1 !== '.DS_Store') {
+              files2.push(\`\${path.join(path.join('./${dirname}', item), item1)}\`)
+            }
+          })
+    
+          files2.forEach( item2 => {
+            files2Str += \`
+            '\${item2}',\`
+          })
+    
+          strOne += \`
+            {
+              title: '\${item}',
+              children: [\${files2Str}]
+            },
+          \`
+        }
+    })
+
+    // 写入
+    let configStr = \`
+    module.exports = {
+      title: 'Notes',
+      description: '知识速查（了不起的个人工具库）',
+      head: [
+        ['link', { rel: 'icon', href: '/favicon.ico' }]
+      ],
+      themeConfig: {
+        repo: 'https://github.com/zhukunpenglinyutong/notes',
+        //导航
+        nav: [
+          { text: '${dirname}', link: '/${dirname}/' }
+        ],
+        // 侧边栏
+        sidebar: {
+          '/${dirname}': [
+            \${strOne}
+          ]
+        }
+      },
+      serviceWorker: true,
+    }
+    \`
+
+    fs.writeFileSync('./docs/.vuepress/config.js', configStr)
+}
+
+// 复制文件夹
+function existsT (src, dst, callback) {
+  //测试某个路径下文件是否存在
+  fs.exists(dst,function(existsT){
+      if(existsT){//不存在
+          callback(src,dst);
+      }else{//存在
+          fs.mkdir(dst,function(){//创建目录
+              callback(src,dst)
+          })
+      }
+  })
+}
+
+// 复制文件夹的辅助函数
+function copyT (src, dst) {
+  //读取目录
+  fs.readdir(src,function(err,paths){
+      // console.log(paths)
+      if(err){
+          throw err;
+      }
+      paths.forEach(function(path){
+          var _src=src+'/'+path;
+          var _dst=dst+'/'+path;
+          var readable;
+          var writable;
+          stat(_src,function(err,st){
+              if(err){
+                  throw err;
+              }
+              
+              if(st.isFile()){
+                  readable=fs.createReadStream(_src);//创建读取流
+                  writable=fs.createWriteStream(_dst);//创建写入流
+                  readable.pipe(writable);
+              }else if(st.isDirectory()){
+                  exists(_src,_dst,copyT);
+              }
+          });
+      });
+  });
+}
+
+
+
+// 删除文件夹
+function delDirT (path){
+    let files = [];
+    if(fs.existsSync(path)){
+        files = fs.readdirSync(path);
+        files.forEach((file, index) => {
+            let curPath = path + "/" + file;
+            if(fs.statSync(curPath).isDirectory()){
+                delDirT(curPath); //递归删除文件夹
+            } else {
+                fs.unlinkSync(curPath); //删除文件
+            }
+        });
+        fs.rmdirSync(path);
+    }
+}
+
+init() // 启动`
+
+}
+
+init()

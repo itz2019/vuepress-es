@@ -1,0 +1,36 @@
+{
+  "name": "vuepress-es",
+  "version": "1.0.0",
+  "description": "<p align=\"center\">   <img width=\"180\" src=\"https://raw.githubusercontent.com/vuejs/vuepress/master/packages/docs/docs/.vuepress/public/hero.png\" alt=\"logo\"> </p>",
+  "main": "./src/bin/VuePressEs",
+  "bin": {
+    "vpe": "./src/bin/VuePressEs"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "node app.js; vuepress dev docs",
+    "build": "node app.js; vuepress build docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itz2019/vuepress-es.git"
+  },
+  "author": "Zhu Kunpeng <270750933@qq.com> (itzkp.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/itz2019/vuepress-es/issues"
+  },
+  "homepage": "https://github.com/itz2019/vuepress-es#readme",
+  "devDependencies": {
+    "vuepress": "^1.0.3"
+  },
+  "dependencies": {
+    "@darkobits/lolcatjs": "^3.1.3",
+    "commander": "^3.0.0",
+    "inquirer": "^6.5.1",
+    "ora": "^3.4.0",
+    "shelljs": "^0.8.3"
+  }
+}
