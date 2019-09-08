@@ -23,7 +23,7 @@ programConfigFn() // 核心命令行配置函数启动
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.1.0', "-v, --version")
+    program.version('v1.1.1', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -43,37 +43,8 @@ function binHeaderFn (cmd) {
     
     let binHeader = {
 
-        // 初始化项目集合
         init () {
             console.log('生成一个初始化项目（功能暂未开放）')
-            // inquirer.prompt([
-            //     {
-            //         type: 'text',
-            //         message: '此操作会在当前路径下创建初始化文件夹，请您自定义此文件夹名称（英文）',
-            //         name: 'dirname'
-            //     }
-            // ]).then( answers => {
-                
-            //     let { dirname } = answers
-                
-            //     const spinner = ora('vpe正在为您初始化项目')
-            //     spinner.start()
-
-            //     let initCreateAppJs = initCreateAppJsFn(dirname) // 生成初始化 init app.js
-            //     shelljs.echo(initCreateAppJs).to('app.js')
-
-            //     setTimeout( () => {
-                    
-            //         shelljs.cd(shelljs.pwd().stdout) // 进入当前目录
-            //         shelljs.mkdir(dirname)
-
-            //         shelljs.exec('node app.js')
-            //         shelljs.exec('npx vuepress dev docs')
-                    
-            //         spinner.stop()
-            //         console.log('初始化完成')
-            //     }, 1000)
-            // })
         },
 
         serve () {
@@ -81,22 +52,13 @@ function binHeaderFn (cmd) {
             let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
             createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
 
-
             const spinner = ora('vpe正在启动预览功能...')
             spinner.start()
 
             // 暂停 1s，主要是有个加载状态，装B用 😸
             setTimeout(() => {
-                let npmList = shelljs.exec('npm list --dept 0') // 首先判断是否安装了VuePress
-                let isNpmVuePress = /vuepress@/.test(npmList)
-    
-                if (isNpmVuePress) {
-                    shelljs.exec('npx vuepress dev build') // 执行sh脚本
-                    spinner.stop()
-                } else {
-                    console.log('❣️  您还未安装 vuepress（npm install vuepress --save） ')
-                    spinner.stop()
-                }
+                shelljs.exec('npx vuepress dev build') // 执行sh脚本
+                spinner.stop()
             }, 1000)
         },
 
@@ -105,22 +67,13 @@ function binHeaderFn (cmd) {
             let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
             createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
 
-
             const spinner = ora('vpe正在编译中（编译后的文件在 build/.vuepress/dist 中）')
             spinner.start()
 
             // 暂停 1s，主要是有个加载状态，装B用 😸
             setTimeout(() => {
-                let npmList = shelljs.exec('npm list --dept 0') // 首先判断是否安装了VuePress
-                let isNpmVuePress = /vuepress@/.test(npmList)
-    
-                if (isNpmVuePress) {
-                    shelljs.exec('npx vuepress build build') // 执行sh脚本
-                    spinner.stop()
-                } else {
-                    console.log('❣️  您还未安装 vuepress（npm install vuepress --save） ')
-                    spinner.stop()
-                }
+                shelljs.exec('npx vuepress build build') // 执行sh脚本
+                spinner.stop()
             }, 1000)
             
         },
@@ -161,6 +114,10 @@ function binHeaderFn (cmd) {
                 spinner.stop()
             }, 500);
 
+        },
+
+        look () {
+            console.log('查看最新版本更新的API（功能暂未开放）')
         }
     
     }
@@ -457,9 +414,11 @@ __   __  _ __     ___
 
 说明：.md ---> .html（简化VuePress配置）
 
+- vpe config 生成配置文件（三个）
+- vpe serve 启动项目预览效果（生成build文件夹）
+- vpe build 打包生成html文件（目录在build/.vuepress/dist）
+- vpe look 查看 vuepress-es 开放的API配置（未开放）
 - vpe init 生成初始化项目（未开放）
-- vpe serve 启动项目预览
-- vpe build 打包生成 html 文件
 `
 }
 

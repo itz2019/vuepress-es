@@ -23,9 +23,6 @@ VuePress是一个非常好的 静态网站生成器，我也使用这个构建�
 ## 🎖使用
 
 ```sh
-# 依赖（需要安装vuepress）
-npm install vuepress --save
-
 # 安装
 npm install vuepress-es --save
 
