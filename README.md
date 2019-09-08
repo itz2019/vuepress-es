@@ -29,6 +29,9 @@ npm install vuepress --save
 # 安装
 npm install vuepress-es --save
 
+# 生成配置文件（建议三项全选）
+npx vpe config
+
 # 预览
 npx vpe serve
 
@@ -46,14 +49,15 @@ npx vpe init
 ### 1.基础功能实现
 
 - [x] 建立文件夹，和.md文件，就能生成网站，用户不用管如何去配置的问题
-- [ ] 首页 README.md 配置
-- [ ] 三级目录结构的 README.md 配置
+- [x] 网址根目录 配置（建立 HOME.md）
+- [x] 跳转目录首屏显示内容 配置（建立 RECORD.md）
 
 ---
 
 ### 2.优化第一版功能
 
 - [ ] 完善配置的功能，使其可以可视化的配置大部分的选项（建立 vpe.config.json）
+  - [x] 基础配置
   - [ ] 导航栏配置
   - [ ] 侧边栏配置
   - [ ] 搜索框配置

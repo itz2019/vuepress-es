@@ -1,26 +1,31 @@
 #!/usr/bin/env node
-
 const program = require('commander') // 核心命令行工具
-const Printer = require('@darkobits/lolcatjs') // 字体渐变（美观用，没啥其他用处，主要是花里胡哨）
 const inquirer = require('inquirer') // 跟用户进行交互
 const ora = require('ora') // loading模块
 const shelljs = require('shelljs'); // 前端写shell
 const fs = require('fs');
 const path = require('path');
-let stat = fs.stat;
 
-// 初始化函数
-function init () {
-    programConfigFn() // 核心命令行配置函数
-}
+
+// 全局
+let dirPath = shelljs.pwd().stdout
+let stat = fs.stat;
+let vpeConfigObj = getVpeConfig(); // 配置对象
+
+
+// ===================================================
+// ============== ** npm核心命令部分 ** ================
+// ===================================================
+
+programConfigFn() // 核心命令行配置函数启动
 
 // 核心命令行配置函数
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.0.0', "-v, --version")
+    program.version('v1.1.0', "-v, --version")
     // -h 帮助
-    program.on('--help', () => { console.log(Printer.default.fromString(titleFu())) });
+    program.on('--help', () => { console.log(helpTitleFu()) });
 
     program
         .usage("[cmd] <options>")
@@ -34,7 +39,7 @@ function programConfigFn () {
 }
 
 // 命令集合函数
-const binHeaderFn = cmd => {
+function binHeaderFn (cmd) {
     
     let binHeader = {
 
@@ -118,213 +123,87 @@ const binHeaderFn = cmd => {
                 }
             }, 1000)
             
+        },
+
+        config () {
+
+            const spinner = ora('vpe正在启动配置可视化')
+            spinner.start()
+
+            // 主要用于自定义配置的
+            
+            // 先看有没有 vpe.config.json 没有的话，走初始化项目
+            // 生成 HOME.md && RECORD.md
+
+            setTimeout(() => {
+
+                inquirer.prompt([
+                    {
+                        type: 'checkbox',
+                        name: 'config',
+                        message: '请选择要生成的配置项（建议三项全选，空格选中）',
+                        choices: [
+                            {name: '网址根目录配置（HOME.md）', value: 'homeMd'},
+                            {name: '跳转目录首屏显示内容配置（RECORD.md）', value: 'recordMd'},
+                            {name: '生成进行更详细的配置（vpn.config.json）', value: 'configJson'}
+                        ]
+                    }
+                ]).then( answers => {
+                    answers.config.forEach(configName => {
+                        switch (configName) {
+                            case 'homeMd': createHomeFn(); break;
+                            case 'recordMd': createRecordFn(); break;
+                            case 'configJson': createConfigFn(); break;
+                        }
+                    })
+                })
+
+                spinner.stop()
+            }, 500);
+
         }
     
     }
 
     return binHeader[cmd]
-
 }
 
-// title文字
-function titleFu () {
-return `
-__   __  _ __     ___ 
-\\ \\ / / | '_ \\   / _ \\
- \\ V /  | |_) | |  __/
-  \\_/   | .__/   \\___|
-        |_|                                                                   
 
-说明：.md ---> .html（简化VuePress配置）
+// ===================================================
+// =============== ** config 命令 ** =================
+// ===================================================
 
-- vpe init 生成初始化项目（并启动项目预览）
-- vpe serve 启动项目预览
-- vpe build 打包生成 html 文件
-
-`
+// 创建 HOME.md 的函数
+function createHomeFn() {
+    fs.writeFileSync(`${dirPath}/HOME.md`, homeTileFn())
 }
 
-// 生成首页文字函数
-function homeTileFn (dirname) {
-return `---
-home: true
-heroImage: https://itzkp-1253302184.cos.ap-beijing.myqcloud.com/github%E5%9B%BE%E7%89%87/notes/3.png
-actionText: 🔥 这里是个按钮 →
-actionLink: /${dirname}/
-features:
-- title: 解释一
-  details: 解释一内容
-- title: 解释二
-  details: 解释二内容
-- title: 解释三
-  details: 解释三内容
-footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（示例）
----`
+// 创建 RECORD.md 的函数
+function createRecordFn() {
+    fs.writeFileSync(`${dirPath}/RECORD.md`, recordFn())
 }
 
-function recordFn () {
-    return `# 成功`
+// 创建 vpe.config.json 的函数
+function createConfigFn() {
+    fs.writeFileSync(`${dirPath}/vpe.config.json`, vpeConfigFn())
 }
 
-// init 时候生成的 app.js
-function initCreateAppJsFn (dirname) {
-
-let homeTile = homeTileFn(dirname)
-
-return `let fs = require("fs");
-let path = require('path')
-let stat = fs.stat;
-
-// 同步读取
-let homeTile = \`${homeTile}\`
-
-function init() {
-        
-    // 1.判断如果有docs目录，就删除掉 docs目录
-    if (fs.existsSync(path.join(__dirname,'docs'))) {
-        delDirT(path.join(__dirname,'docs'))
-    }
-
-    // 2.创建目录
-    fs.mkdirSync(path.join(__dirname, 'docs'))
-    fs.mkdirSync(path.join(__dirname, './docs/.vuepress'))
-
-    // 2.5 将 record.md 内容复制到 文件下，防止报404（异步）
-    fs.readFile('record.md', function (err, data) {
-        fs.writeFile('./docs/${dirname}/README.md', data,  function(err) {
-          if (err) {
-              return console.error(err);
-          }
-        });
-    })
-
-    // 3.文件夹复制
-    existsT('./${dirname}','./docs/${dirname}',copyT)
-
-    // 4.生成 README.md 要不会首页会报404
-    fs.writeFileSync('./docs/README.md', homeTile)
-    
-    // 5.遍历 生成路径导航（生成规则写入 config.js中）
-    let strOne = ''
-    let one = fs.readdirSync('./${dirname}')
-    one.forEach(item => {
-        if (!/.md/.${dirname}(item) && item !== '.DS_Store') {
-    
-          let files2 = []
-          let files2Str = ''
-          fs.readdirSync(path.join('./${dirname}', item)).forEach( item1 => {
-            // Mac系统下的问题
-            if (item1 !== '.DS_Store') {
-              files2.push(\`\${path.join(path.join('./${dirname}', item), item1)}\`)
-            }
-          })
-    
-          files2.forEach( item2 => {
-            files2Str += \`
-            '\${item2}',\`
-          })
-    
-          strOne += \`
-            {
-              title: '\${item}',
-              children: [\${files2Str}]
-            },
-          \`
-        }
-    })
-
-    // 写入
-    let configStr = \`
-    module.exports = {
-      title: 'Notes',
-      description: '知识速查（了不起的个人工具库）',
-      head: [
-        ['link', { rel: 'icon', href: '/favicon.ico' }]
-      ],
-      themeConfig: {
-        repo: 'https://github.com/zhukunpenglinyutong/notes',
-        //导航
-        nav: [
-          { text: '${dirname}', link: '/${dirname}/' }
-        ],
-        // 侧边栏
-        sidebar: {
-          '/${dirname}': [
-            \${strOne}
-          ]
-        }
-      },
-      serviceWorker: true,
-    }
-    \`
-
-    fs.writeFileSync('./docs/.vuepress/config.js', configStr)
+// 生成 vpe.config.json 内容
+function vpeConfigFn () {
+return `{
+    // 左上角的标题（也是首页图像下面的一级标题）
+    "title": "在vpe.config.json 中 配置 title",
+    // 首页头像下面标题的解释
+    "description": "在vpe.config.json 中 配置 description",
+    // 右上角 跳转GitHub的地址（写一个GitHub项目地址）
+    "repo": "https://github.com/itz2019/vuepress-es"
+}`
 }
 
-// 复制文件夹
-function existsT (src, dst, callback) {
-  //测试某个路径下文件是否存在
-  fs.exists(dst,function(existsT){
-      if(existsT){//不存在
-          callback(src,dst);
-      }else{//存在
-          fs.mkdir(dst,function(){//创建目录
-              callback(src,dst)
-          })
-      }
-  })
-}
 
-// 复制文件夹的辅助函数
-function copyT (src, dst) {
-  //读取目录
-  fs.readdir(src,function(err,paths){
-      // console.log(paths)
-      if(err){
-          throw err;
-      }
-      paths.forEach(function(path){
-          var _src=src+'/'+path;
-          var _dst=dst+'/'+path;
-          var readable;
-          var writable;
-          stat(_src,function(err,st){
-              if(err){
-                  throw err;
-              }
-              
-              if(st.isFile()){
-                  readable=fs.createReadStream(_src);//创建读取流
-                  writable=fs.createWriteStream(_dst);//创建写入流
-                  readable.pipe(writable);
-              }else if(st.isDirectory()){
-                  exists(_src,_dst,copyT);
-              }
-          });
-      });
-  });
-}
-
-// 删除文件夹
-function delDirT (path){
-    let files = [];
-    if(fs.existsSync(path)){
-        files = fs.readdirSync(path);
-        files.forEach((file, index) => {
-            let curPath = path + "/" + file;
-            if(fs.statSync(curPath).isDirectory()){
-                delDirT(curPath); //递归删除文件夹
-            } else {
-                fs.unlinkSync(curPath); //删除文件
-            }
-        });
-        fs.rmdirSync(path);
-    }
-}
-
-init() // 启动`
-
-}
+// ===================================================
+// =========== ** serve && build 命令 ** =============
+// ===================================================
 
 // 遍历文件夹，生成文件对象树
 function readDirToObjTree(){
@@ -371,6 +250,7 @@ function readDirToObjTree(){
 }
 
 // **************** 根据文档对象树 生成 build *************
+
 // 生成VuePress规则
 function createVuePressInit (objTree) {
     createDist() // 创建打包之后的目录
@@ -381,8 +261,6 @@ function createVuePressInit (objTree) {
 
 // 1.创建打包之后的目录build
 function createDist () {
-    
-    let dirPath = shelljs.pwd().stdout
 
     // 如果有和打包名称一致的名称，就先删除掉
     if (fs.existsSync(path.join(dirPath, "build"))) {
@@ -398,10 +276,7 @@ function createDist () {
 
 // 2.复制文件夹到build
 function copyDirFn (objTree) {
-    objTree.forEach(item => {
-        let dirPath = shelljs.pwd().stdout
-        // console.log(item.path)
-        // console.log(`${dirPath}/build/${item.name}`)        
+    objTree.forEach(item => {  
         exists(item.path, `${dirPath}/build/${item.name}`, copy)
     })
     console.log('2️⃣  复制文件到打包目录完成')
@@ -454,14 +329,20 @@ function createVuePressConfig (objTree) {
 
     })
 
+// 读取配置集合
+
+let title = getConfig('title', '在 vpe.config.json 中配置 title')
+let description = getConfig('description', '在 vpe.config.json 中配置 description')
+let repo = getConfig('repo', 'https://github.com/itz2019/vuepress-es')
+
 let configStr = `module.exports = {
-    title: 'Notes',
-    description: '知识速查（了不起的个人工具库）',
+    title: '${title}',
+    description: '${description}',
     head: [
         ['link', { rel: 'icon', href: '/favicon.ico' }]
     ],
     themeConfig: {
-        repo: 'https://github.com/zhukunpenglinyutong/notes',
+        repo: '${repo}',
         //导航
         nav: [
             ${nav}
@@ -475,8 +356,7 @@ let configStr = `module.exports = {
     markdown: {
         lineNumbers: true // 开启行号
     }
-}`
-    let dirPath = shelljs.pwd().stdout
+}`;
     fs.writeFileSync(`${dirPath}/build/.vuepress/config.js`, configStr)
     console.log('3️⃣  根据文件对象树，生成VuePress规则完成')
 }
@@ -486,7 +366,6 @@ function createBasicFile (objTree) {
     
     // 在打包文件夹根目录 生成 README.md 要不会vuepress会产生404
     let homeTile = homeTileFn()
-    let dirPath = shelljs.pwd().stdout
     fs.writeFileSync(`${dirPath}/build/README.md`, homeTile)
 
     setTimeout(() => {
@@ -500,6 +379,16 @@ function createBasicFile (objTree) {
 
     }, 100);
 }
+
+// 读取配置，并且配置没有的时候，生成提示语句（工具函数）
+function getConfig (configName, explain) {
+    return vpeConfigObj ? vpeConfigObj[configName] : explain
+}
+
+
+// ===================================================
+// ================= ** 通用函数 ** ===================
+// ===================================================
 
 // 复制文件夹（工具函数）
 function exists (src, dst, callback) {
@@ -557,8 +446,71 @@ function delDir(path){
     }
 }
 
+// vpe help 显示的文字（工具类）
+function helpTitleFu () {
+return `
+__   __  _ __     ___ 
+\\ \\ / / | '_ \\   / _ \\
+ \\ V /  | |_) | |  __/
+  \\_/   | .__/   \\___|
+        |_|                                                                   
 
-// 一般来说会遍历 文件下所有的文件，生成结构，如果你想有文件夹不参与生成结构，可以进行配置
-// vpe.config.js
+说明：.md ---> .html（简化VuePress配置）
 
-init()
+- vpe init 生成初始化项目（未开放）
+- vpe serve 启动项目预览
+- vpe build 打包生成 html 文件
+`
+}
+
+// 获取 vpe.config.json 内容
+function getVpeConfig () {
+    try {
+        // 读取 vpe.config.json 内容
+        var dataStr = fs.readFileSync('vpe.config.json').toString();
+        return eval("("+ dataStr +")")
+    } catch (e) {
+    }
+}
+
+// 生成 HOME.md 文件的内容 && 读取 HOME.md
+function homeTileFn () {
+    try {
+        // 读取 HOME.md 内容
+        var dataStr = fs.readFileSync('HOME.md').toString();
+        return dataStr
+    } catch (e) {
+return `---
+# 如果下面某个效果你不想使用，直接注释或者删除即可
+# 是否启动home页面
+home: true
+# 图像
+heroImage: https://itzkp-1253302184.cos.ap-beijing.myqcloud.com/github%E5%9B%BE%E7%89%87/vuepress-es/1.HOME%E5%A4%B4%E5%83%8F%E5%9B%BE%E7%89%87.png
+# 按钮显示文字
+actionText: 🔥 在HOME.md中设置这里的文字 →
+# 按钮跳转的连接
+actionLink: /测试/
+# 解释
+features:
+- title: 解释一（在HOME.md中设置） # 标题
+  details: 解释一内容 # 内容
+- title: 解释二
+  details: 解释二内容
+- title: 解释三
+  details: 解释三内容
+# 脚头
+footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（在HOME.md中设置）
+---`
+    }
+}
+
+// 生成 RECORD.md 文件的内容 && 读取 HOME.md
+function recordFn () {
+    try {
+        // 读取 HOME.md 内容
+        var dataStr = fs.readFileSync('RECORD.md').toString();
+        return dataStr
+    } catch (e) {
+        return `# 这里书写的规则，就是普通的 .md 的规则（内容在 RECORD.md 中修改）`
+    }
+}
