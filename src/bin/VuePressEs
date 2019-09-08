@@ -11,7 +11,7 @@ const path = require('path');
 let dirPath = shelljs.pwd().stdout
 let stat = fs.stat;
 let vpeConfigObj = getVpeConfig(); // 配置对象
-
+let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成 文件真实对象树
 
 // ===================================================
 // ============== ** npm核心命令部分 ** ================
@@ -23,7 +23,7 @@ programConfigFn() // 核心命令行配置函数启动
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.1.1', "-v, --version")
+    program.version('v1.1.9', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -49,7 +49,6 @@ function binHeaderFn (cmd) {
 
         serve () {
             
-            let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
             createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
 
             const spinner = ora('vpe正在启动预览功能...')
@@ -64,7 +63,6 @@ function binHeaderFn (cmd) {
 
         build () {
 
-            let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成文件对象树            
             createVuePressInit(dirObjTree) // 根据文件对象树，生成VuePress规则
 
             const spinner = ora('vpe正在编译中（编译后的文件在 build/.vuepress/dist 中）')
@@ -147,22 +145,254 @@ function createConfigFn() {
 
 // 生成 vpe.config.json 内容
 function vpeConfigFn () {
+
+    let folderShowOrder = createFolderShowOrder()
+
 return `{
     // 左上角的标题（也是首页图像下面的一级标题）
     "title": "在vpe.config.json 中 配置 title",
     // 首页头像下面标题的解释
     "description": "在vpe.config.json 中 配置 description",
     // 右上角 跳转GitHub的地址（写一个GitHub项目地址）
-    "repo": "https://github.com/itz2019/vuepress-es"
+    "repo": "https://github.com/itz2019/vuepress-es",
+
+    // 设置侧边栏是否全部默认展开（一般官方介绍经常使用这个）
+    "collapsable": true, // 注意：false 是展开，true 是不展开
+    // 代码块是否显示行号
+    "lineNumbers": false,
+
+    // 文件夹展示顺序（有需求就进行设置，不仅可以设置需要显示的文件夹，还能设置展示的顺序，这里可能有点绕）
+    "folderShowOrder": [
+        ${folderShowOrder}
+    ]
 }`
 }
 
+// 生成文件显示对象树（工具类）
+function createFolderShowOrder () {
+    // 首先要遍历所有的文件夹（去除 node_modules && build）
+    
+    let objStr = ''
+    let childrenFolderStr = ''
+
+    // 首先需要遍历文件对象树，拿到二级 childrenFolder 属性
+    dirObjTree.forEach(item => {
+        item.data.forEach(jtem => {
+            childrenFolderStr += `"${jtem.name}", `
+        })
+        objStr += `{
+            "title": "${item.name}",
+            "alias": "中文别名${item.name}",
+            "childrenFolder": [${childrenFolderStr}]
+        },
+        `;
+        childrenFolderStr = ''
+    })
+
+    return objStr
+}
 
 // ===================================================
 // =========== ** serve && build 命令 ** =============
 // ===================================================
 
-// 遍历文件夹，生成文件对象树
+// 生成VuePress规则
+function createVuePressInit (objTree) {
+    createDist() // 创建打包之后的目录
+    copyDirFn(objTree) // 复制文件
+    createVuePressConfig(objTree) // 根据文件对象树，生成VuePress规则
+    createBasicFile(objTree) // 生成README.md 文件，不写的话会有问题
+}
+
+// 1.创建打包之后的目录build
+function createDist () {
+
+    // 如果有和打包名称一致的名称，就先删除掉
+    if (fs.existsSync(path.join(dirPath, "build"))) {
+        delDir(path.join(dirPath, "build"))
+    }
+
+    // 创建目录
+    fs.mkdirSync(path.join(dirPath, "build"))
+    fs.mkdirSync(path.join(dirPath, `./build/.vuepress`))
+    console.log('1️⃣  创建打包文件夹成功')
+
+}
+
+// 2.复制文件夹到build
+function copyDirFn (objTree) {
+    objTree.forEach(item => {  
+        exists(item.path, `${dirPath}/build/${item.name}`, copy)
+    })
+    console.log('2️⃣  复制文件到打包目录完成')
+}
+
+// 3.生成VuePress规则
+function createVuePressConfig (objTree) {
+
+    // 读取配置集合
+    let title = getConfig('title', '在 vpe.config.json 中配置 title')
+    let description = getConfig('description', '在 vpe.config.json 中配置 description')
+    let repo = getConfig('repo', 'https://github.com/itz2019/vuepress-es')
+    let lineNumbers = getConfig('lineNumbers', false)
+
+    let [nav, sidebar] = createNavAndSidebar()
+
+let configStr = `module.exports = {
+    title: '${title}',
+    description: '${description}',
+    head: [
+        ['link', { rel: 'icon', href: '/favicon.ico' }]
+    ],
+    themeConfig: {
+        repo: '${repo}',
+        //导航
+        nav: [
+            ${nav}
+        ],
+        // 侧边栏
+        sidebar: {
+            ${sidebar}
+        }
+    },
+    serviceWorker: true,
+    markdown: {
+        lineNumbers: ${lineNumbers} // 开启行号
+    }
+}`;
+    fs.writeFileSync(`${dirPath}/build/.vuepress/config.js`, configStr)
+    console.log('3️⃣  根据文件对象树，生成VuePress规则完成')
+}
+
+// 4.生成README.md文件（异步）
+function createBasicFile (objTree) {
+    
+    // 在打包文件夹根目录 生成 README.md 要不会vuepress会产生404
+    let homeTile = homeTileFn()
+    fs.writeFileSync(`${dirPath}/build/README.md`, homeTile)
+
+    setTimeout(() => {
+        // 在打包文件夹 每个分类文件夹下 生成 README.md，否则内容显示不出来
+        let record = recordFn()
+        objTree.forEach(item => {
+            // console.log('🔥', `${dirPath}/build/${item.name}/README.md`)
+            fs.writeFileSync(`${dirPath}/build/${item.name}/README.md`, record)
+        })
+        console.log('4️⃣  生成README.md 文件完成')
+
+    }, 100);
+}
+
+// 读取配置，并且配置没有的时候，生成提示语句（工具函数）
+function getConfig (configName, explain) {
+    return vpeConfigObj ? vpeConfigObj[configName] : explain
+}
+
+// 生成导航栏，侧边栏（工具类）
+function createNavAndSidebar () {
+    // 根据 文件显示对象树 来生成（如果没有的话，走 文件真实对象树）
+
+    // 是否有对象
+    let isFolderShowOrder = getConfig('folderShowOrder', false)
+    
+    console.log('isFolderShowOrder', isFolderShowOrder)
+
+    let nav = ''
+    let sidebar = ''
+    let collapsable = getConfig('collapsable', true)
+    let collapsableStr = collapsable ? '' : "collapsable: false,"
+
+    if (isFolderShowOrder) {
+
+        isFolderShowOrder.forEach(item => {
+            
+            // 1.生成导航
+            nav += `{ text: '${item.alias}', link: '/${item.title}/' },
+            `;
+
+            // 2.生成侧边栏
+
+            let twLevel = ''
+            item.childrenFolder.forEach(jtem => {
+
+                // console.log('外级', item.title)
+                // console.log('内级', jtem)
+                // 获取到符合的数组
+                let resData = dirObjTree.filter(ztem => ztem.name == item.title)[0].data.filter(ztem => ztem.name === jtem)[0].data
+                console.log('结果：', resData)
+                
+                let children = ''                
+                resData.forEach(res => {
+                    children += `'${item.title}/${jtem}/${res}',
+                            `
+                })
+
+                twLevel += `{
+                    title: '${jtem}',
+                    ${collapsableStr}
+                    children: [
+                        ${children}
+                    ]
+                },
+                `
+            })
+
+            sidebar += `
+            '/${item.title}': [
+                ${twLevel}
+            ],
+        `
+        })
+
+    } else {
+
+        dirObjTree.forEach(item => {
+
+            // 1.生成导航
+            nav += `{ text: '${item.name}', link: '/${item.name}/' },
+            `;
+    
+            // 2.生成侧边栏
+            
+            // 首先先循环本层的二级目录
+            let twLevel = ''
+            item.data.forEach(jtem => {
+    
+                let children = ''
+                jtem.data.forEach(ztem => {
+                    children += `'${item.name}/${jtem.name}/${ztem}',
+                            `
+                })
+    
+                twLevel += `
+                    {
+                        title: '${jtem.name}',
+                        ${collapsableStr}
+                        children: [
+                            ${children}
+                        ]
+                    },
+                `
+            })
+    
+            // 拼接
+            sidebar += `
+                '/${item.name}': [
+                    ${twLevel}
+                ],
+            `
+    
+        })
+    }
+
+    return [nav, sidebar]
+}
+
+// ===================================================
+// ================= ** 通用函数 ** ===================
+// ===================================================
+
+// 遍历文件夹，生成文件对象树（核心方法）
 function readDirToObjTree(){
     
     let foldPath = shelljs.pwd().stdout // 当前目录的绝对路径
@@ -205,147 +435,6 @@ function readDirToObjTree(){
 
     return objTree
 }
-
-// **************** 根据文档对象树 生成 build *************
-
-// 生成VuePress规则
-function createVuePressInit (objTree) {
-    createDist() // 创建打包之后的目录
-    copyDirFn(objTree) // 复制文件
-    createVuePressConfig(objTree) // 根据文件对象树，生成VuePress规则
-    createBasicFile(objTree) // 生成README.md 文件，不写的话会有问题
-}
-
-// 1.创建打包之后的目录build
-function createDist () {
-
-    // 如果有和打包名称一致的名称，就先删除掉
-    if (fs.existsSync(path.join(dirPath, "build"))) {
-        delDir(path.join(dirPath, "build"))
-    }
-
-    // 创建目录
-    fs.mkdirSync(path.join(dirPath, "build"))
-    fs.mkdirSync(path.join(dirPath, `./build/.vuepress`))
-    console.log('1️⃣  创建打包文件夹成功')
-
-}
-
-// 2.复制文件夹到build
-function copyDirFn (objTree) {
-    objTree.forEach(item => {  
-        exists(item.path, `${dirPath}/build/${item.name}`, copy)
-    })
-    console.log('2️⃣  复制文件到打包目录完成')
-}
-
-// 3.生成VuePress规则
-function createVuePressConfig (objTree) {
-
-    let nav = ''
-    let sidebar = ''
-
-    objTree.forEach(item => {
-
-        // 1.生成导航
-        nav += `
-            {
-                text: '${item.name}',
-                link: '/${item.name}/'
-            },
-        `;
-
-        // 2.生成侧边栏
-        
-        // 首先先循环本层的二级目录
-        let twLevel = ''
-        item.data.forEach(jtem => {
-
-            let children = ''
-            jtem.data.forEach(ztem => {
-                children += `'${item.name}/${jtem.name}/${ztem}',
-                        `
-            })
-
-            twLevel += `
-                {
-                    title: '${jtem.name}',
-                    children: [
-                        ${children}
-                    ]
-                },
-            `
-        })
-
-        // 拼接
-        sidebar += `
-            '/${item.name}': [
-                ${twLevel}
-            ],
-        `
-
-    })
-
-// 读取配置集合
-
-let title = getConfig('title', '在 vpe.config.json 中配置 title')
-let description = getConfig('description', '在 vpe.config.json 中配置 description')
-let repo = getConfig('repo', 'https://github.com/itz2019/vuepress-es')
-
-let configStr = `module.exports = {
-    title: '${title}',
-    description: '${description}',
-    head: [
-        ['link', { rel: 'icon', href: '/favicon.ico' }]
-    ],
-    themeConfig: {
-        repo: '${repo}',
-        //导航
-        nav: [
-            ${nav}
-        ],
-        // 侧边栏
-        sidebar: {
-            ${sidebar}
-        }
-    },
-    serviceWorker: true,
-    markdown: {
-        lineNumbers: true // 开启行号
-    }
-}`;
-    fs.writeFileSync(`${dirPath}/build/.vuepress/config.js`, configStr)
-    console.log('3️⃣  根据文件对象树，生成VuePress规则完成')
-}
-
-// 4.生成README.md文件（异步）
-function createBasicFile (objTree) {
-    
-    // 在打包文件夹根目录 生成 README.md 要不会vuepress会产生404
-    let homeTile = homeTileFn()
-    fs.writeFileSync(`${dirPath}/build/README.md`, homeTile)
-
-    setTimeout(() => {
-        // 在打包文件夹 每个分类文件夹下 生成 README.md，否则内容显示不出来
-        let record = recordFn()
-        objTree.forEach(item => {
-            // console.log('🔥', `${dirPath}/build/${item.name}/README.md`)
-            fs.writeFileSync(`${dirPath}/build/${item.name}/README.md`, record)
-        })
-        console.log('4️⃣  生成README.md 文件完成')
-
-    }, 100);
-}
-
-// 读取配置，并且配置没有的时候，生成提示语句（工具函数）
-function getConfig (configName, explain) {
-    return vpeConfigObj ? vpeConfigObj[configName] : explain
-}
-
-
-// ===================================================
-// ================= ** 通用函数 ** ===================
-// ===================================================
 
 // 复制文件夹（工具函数）
 function exists (src, dst, callback) {
