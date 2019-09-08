@@ -4,9 +4,9 @@
 
 <p align="center">
     <a href="https://www.npmjs.com/package/vuepress-es"><img src="https://img.shields.io/npm/v/vuepress-es" alt="npm版本号"></a>
+    <a href="javascript:;"><img src="https://circleci.com/gh/itz2019/vuepress-es/tree/master.svg?style=svg)](https://circleci.com/gh/itz2019/vuepress-es/tree/master" alt="CircleCI"></a>
     <a href="javascript:;"><img src="https://img.shields.io/npm/dw/vuepress-es" alt="每周下载量"></a>
     <a href="javascript:;"><img src="https://img.shields.io/github/license/itz2019/vuepress-es" alt="LICENSE"></a>
-    <a href="javascript:;"><img src="https://img.shields.io/github/repo-size/itz2019/vuepress-es" alt="repo-size"></a>
 </p>
 
 <h2 align="center">vuepress-es 可以让你快速使用vuepress，而不需要配置</h2>
