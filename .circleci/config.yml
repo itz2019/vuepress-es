@@ -1,0 +1,11 @@
+version: 2
+jobs:
+  build: 
+    branches: 
+      only: 
+        - master
+    steps:
+      - checkout
+      - run:
+        - name: Install
+        - command: npm install
