@@ -41,7 +41,7 @@ npx vpe init
 
 ---
 
-## 🎫示例演示
+## 🌈示例演示
 
 - npm init
 - npm install vuepress-es --save 
@@ -59,7 +59,7 @@ npx vpe init
 
 此属性可以完全自定义导航栏展示的顺序和名称 和 侧边栏展示的顺序，如果你没有特殊的展示顺序需要，只需要更改显示名称即可，我现在只把folderShowOrder改一下试试
 
-```json
+```js
 {
     // 左上角的标题（也是首页图像下面的一级标题）
     "title": "在vpe.config.json 中 配置 title",
