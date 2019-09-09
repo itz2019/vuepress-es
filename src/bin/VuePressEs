@@ -1,17 +1,23 @@
 #!/usr/bin/env node
 const program = require('commander') // 核心命令行工具
-const inquirer = require('inquirer') // 跟用户进行交互
 const ora = require('ora') // loading模块
 const shelljs = require('shelljs'); // 前端写shell
 const fs = require('fs');
 const path = require('path');
 
+// 遍历文件的时候是要有黑名单的 ===> .开头的隐藏文件不遍历，node_modules，build 文件夹 不遍历
+// 首先生成 真实文件对象树 用于生成 vpe.config.json
+// 根据 vpe.config.json 生成 规定文件对象树
+
+// 用户没有生成配置文件 vpe.config.json 的情况下，就需要走默认配置
+
 
 // 全局
 let dirPath = shelljs.pwd().stdout
 let stat = fs.stat;
-let vpeConfigObj = getVpeConfig(); // 配置对象
 let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成 文件真实对象树
+let vpeConfigObj = getVpeConfig(); // 配置对象
+
 
 // ===================================================
 // ============== ** npm核心命令部分 ** ================
@@ -23,7 +29,7 @@ programConfigFn() // 核心命令行配置函数启动
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.1.9', "-v, --version")
+    program.version('v1.2.0', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -77,41 +83,16 @@ function binHeaderFn (cmd) {
         },
 
         config () {
-
-            const spinner = ora('vpe正在启动配置可视化')
+            const spinner = ora('vpe正在创建三个配置文件...')
             spinner.start()
 
-            // 主要用于自定义配置的
-            
-            // 先看有没有 vpe.config.json 没有的话，走初始化项目
-            // 生成 HOME.md && RECORD.md
-
+            // 暂停 1s，主要是有个加载状态，装B用 😸
             setTimeout(() => {
-
-                inquirer.prompt([
-                    {
-                        type: 'checkbox',
-                        name: 'config',
-                        message: '请选择要生成的配置项（建议三项全选，空格选中）',
-                        choices: [
-                            {name: '网址根目录配置（HOME.md）', value: 'homeMd'},
-                            {name: '跳转目录首屏显示内容配置（RECORD.md）', value: 'recordMd'},
-                            {name: '生成进行更详细的配置（vpn.config.json）', value: 'configJson'}
-                        ]
-                    }
-                ]).then( answers => {
-                    answers.config.forEach(configName => {
-                        switch (configName) {
-                            case 'homeMd': createHomeFn(); break;
-                            case 'recordMd': createRecordFn(); break;
-                            case 'configJson': createConfigFn(); break;
-                        }
-                    })
-                })
-
+                createHomeFn()
+                createRecordFn()
+                createConfigFn()
                 spinner.stop()
-            }, 500);
-
+            }, 1000)
         },
 
         look () {
@@ -130,12 +111,12 @@ function binHeaderFn (cmd) {
 
 // 创建 HOME.md 的函数
 function createHomeFn() {
-    fs.writeFileSync(`${dirPath}/HOME.md`, homeTileFn())
+    fs.writeFileSync(`${dirPath}/ZHOME.md`, homeTileFn())
 }
 
 // 创建 RECORD.md 的函数
 function createRecordFn() {
-    fs.writeFileSync(`${dirPath}/RECORD.md`, recordFn())
+    fs.writeFileSync(`${dirPath}/ZRECORD.md`, recordFn())
 }
 
 // 创建 vpe.config.json 的函数
@@ -168,7 +149,7 @@ return `{
 }`
 }
 
-// 生成文件显示对象树（工具类）
+// 生成 规定文件对象树（核心）
 function createFolderShowOrder () {
     // 首先要遍历所有的文件夹（去除 node_modules && build）
     
@@ -199,8 +180,8 @@ function createFolderShowOrder () {
 // 生成VuePress规则
 function createVuePressInit (objTree) {
     createDist() // 创建打包之后的目录
-    copyDirFn(objTree) // 复制文件
-    createVuePressConfig(objTree) // 根据文件对象树，生成VuePress规则
+    copyDirFn() // 复制文件
+    createVuePressConfig() // 根据文件对象树，生成VuePress规则
     createBasicFile(objTree) // 生成README.md 文件，不写的话会有问题
 }
 
@@ -220,15 +201,17 @@ function createDist () {
 }
 
 // 2.复制文件夹到build
-function copyDirFn (objTree) {
-    objTree.forEach(item => {  
-        exists(item.path, `${dirPath}/build/${item.name}`, copy)
+function copyDirFn () {
+    
+    // 这里应该根据 规定文件树 进行
+    vpeConfigObj.folderShowOrder.forEach(item => {  
+        exists(item.title, `${dirPath}/build/${item.title}`, copy)
     })
-    console.log('2️⃣  复制文件到打包目录完成')
+    console.log('2️⃣  复制文件到build目录完成')
 }
 
 // 3.生成VuePress规则
-function createVuePressConfig (objTree) {
+function createVuePressConfig () {
 
     // 读取配置集合
     let title = getConfig('title', '在 vpe.config.json 中配置 title')
@@ -265,7 +248,7 @@ let configStr = `module.exports = {
 }
 
 // 4.生成README.md文件（异步）
-function createBasicFile (objTree) {
+function createBasicFile () {
     
     // 在打包文件夹根目录 生成 README.md 要不会vuepress会产生404
     let homeTile = homeTileFn()
@@ -274,9 +257,8 @@ function createBasicFile (objTree) {
     setTimeout(() => {
         // 在打包文件夹 每个分类文件夹下 生成 README.md，否则内容显示不出来
         let record = recordFn()
-        objTree.forEach(item => {
-            // console.log('🔥', `${dirPath}/build/${item.name}/README.md`)
-            fs.writeFileSync(`${dirPath}/build/${item.name}/README.md`, record)
+        vpeConfigObj.folderShowOrder.forEach(item => {
+            fs.writeFileSync(`${dirPath}/build/${item.title}/README.md`, record)
         })
         console.log('4️⃣  生成README.md 文件完成')
 
@@ -294,8 +276,6 @@ function createNavAndSidebar () {
 
     // 是否有对象
     let isFolderShowOrder = getConfig('folderShowOrder', false)
-    
-    console.log('isFolderShowOrder', isFolderShowOrder)
 
     let nav = ''
     let sidebar = ''
@@ -315,11 +295,8 @@ function createNavAndSidebar () {
             let twLevel = ''
             item.childrenFolder.forEach(jtem => {
 
-                // console.log('外级', item.title)
-                // console.log('内级', jtem)
                 // 获取到符合的数组
                 let resData = dirObjTree.filter(ztem => ztem.name == item.title)[0].data.filter(ztem => ztem.name === jtem)[0].data
-                console.log('结果：', resData)
                 
                 let children = ''                
                 resData.forEach(res => {
@@ -392,7 +369,7 @@ function createNavAndSidebar () {
 // ================= ** 通用函数 ** ===================
 // ===================================================
 
-// 遍历文件夹，生成文件对象树（核心方法）
+// 遍历文件夹，生成 真实文件对象树（核心方法）
 function readDirToObjTree(){
     
     let foldPath = shelljs.pwd().stdout // 当前目录的绝对路径
@@ -410,8 +387,8 @@ function readDirToObjTree(){
             let isDir = fs.statSync(`${foldPath}/${item}`).isDirectory()
             // console.log(`❣️ ${item} 是否是 文件夹`, isDir)
 
-            // 核心数据处理
-            if (isDir && item !==  'node_modules' && item !==  'build') {
+            // 核心数据处理（是文件，并且不是以 .开头的隐藏文件，并且不是 node_modules && build）
+            if (isDir && !/^\./.test(item) && item !==  'node_modules' && item !==  'build') {
                 // console.log('🔥 可以进入到生成目录的文件夹', item)
                 data.push({
                     name: item,
@@ -420,7 +397,7 @@ function readDirToObjTree(){
                 })
             } else if (!isRootPath) {
                 // console.log('✅ 不是文件夹，并且不是第一级', item)
-                data.push(item)
+                if (item !== '.DS_Store') data.push(item);
             }
 
         })
@@ -492,7 +469,7 @@ function delDir(path){
     }
 }
 
-// vpe help 显示的文字（工具类）
+// vpe help 显示的文字
 function helpTitleFu () {
 return `
 __   __  _ __     ___ 
@@ -518,6 +495,8 @@ function getVpeConfig () {
         var dataStr = fs.readFileSync('vpe.config.json').toString();
         return eval("("+ dataStr +")")
     } catch (e) {
+        // 生成默认配置对象
+        return eval("("+ vpeConfigFn() +")")
     }
 }
 
@@ -525,7 +504,7 @@ function getVpeConfig () {
 function homeTileFn () {
     try {
         // 读取 HOME.md 内容
-        var dataStr = fs.readFileSync('HOME.md').toString();
+        var dataStr = fs.readFileSync('ZHOME.md').toString();
         return dataStr
     } catch (e) {
 return `---
@@ -537,7 +516,7 @@ heroImage: https://itzkp-1253302184.cos.ap-beijing.myqcloud.com/github%E5%9B%BE%
 # 按钮显示文字
 actionText: 🔥 在HOME.md中设置这里的文字 →
 # 按钮跳转的连接
-actionLink: /测试/
+actionLink: /${vpeConfigObj.folderShowOrder[0].title}/
 # 解释
 features:
 - title: 解释一（在HOME.md中设置） # 标题
@@ -552,11 +531,11 @@ footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（在HO
     }
 }
 
-// 生成 RECORD.md 文件的内容 && 读取 HOME.md
+// 生成 RECORD.md 文件的内容 && 读取 RECORD.md
 function recordFn () {
     try {
         // 读取 HOME.md 内容
-        var dataStr = fs.readFileSync('RECORD.md').toString();
+        var dataStr = fs.readFileSync('ZRECORD.md').toString();
         return dataStr
     } catch (e) {
         return `# 这里书写的规则，就是普通的 .md 的规则（内容在 RECORD.md 中修改）`

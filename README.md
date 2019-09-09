@@ -26,7 +26,7 @@ VuePress是一个非常好的 静态网站生成器，我也使用这个构建�
 # 安装
 npm install vuepress-es --save
 
-# 生成配置文件（建议三项全选）
+# 生成配置文件
 npx vpe config
 
 # 预览

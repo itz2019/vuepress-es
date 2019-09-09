@@ -1,6 +1,6 @@
 {
   "name": "vuepress-es",
-  "version": "1.1.9",
+  "version": "1.2.0",
   "description": "vuepress-es 可以让你快速使用vuepress，而不需要进行配置",
   "keywords": [
     "vuepress"
@@ -31,7 +31,6 @@
   "dependencies": {
     "vuepress": "^1.0.4",
     "commander": "^3.0.0",
-    "inquirer": "^6.5.1",
     "ora": "^3.4.0",
     "shelljs": "^0.8.3"
   }
