@@ -29,7 +29,7 @@ programConfigFn() // 核心命令行配置函数启动
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.2.1', "-v, --version")
+    program.version('v1.2.2', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -404,7 +404,7 @@ function readDirToObjTree(){
 
         // 2.遍历目录循环（递归）
         data.length > 0 && data[0].name !== undefined 
-            ? data.forEach(item => recursion(item.path, item.data, false)) 
+            ? data.forEach(item => { if (item.path) recursion(item.path, item.data, false) })
             : ''
     }
 
