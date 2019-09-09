@@ -29,7 +29,7 @@ programConfigFn() // 核心命令行配置函数启动
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.2.0', "-v, --version")
+    program.version('v1.2.1', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -514,19 +514,19 @@ home: true
 # 图像
 heroImage: https://itzkp-1253302184.cos.ap-beijing.myqcloud.com/github%E5%9B%BE%E7%89%87/vuepress-es/1.HOME%E5%A4%B4%E5%83%8F%E5%9B%BE%E7%89%87.png
 # 按钮显示文字
-actionText: 🔥 在HOME.md中设置这里的文字 →
+actionText: 🔥 在ZHOME.md中设置这里的文字 →
 # 按钮跳转的连接
 actionLink: /${vpeConfigObj.folderShowOrder[0].title}/
 # 解释
 features:
-- title: 解释一（在HOME.md中设置） # 标题
+- title: 解释一（在ZHOME.md中设置） # 标题
   details: 解释一内容 # 内容
 - title: 解释二
   details: 解释二内容
 - title: 解释三
   details: 解释三内容
 # 脚头
-footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（在HOME.md中设置）
+footer: MIT Licensed | © Copyright 2019 朱昆鹏 - All Rights Reserved（在ZHOME.md中设置）
 ---`
     }
 }
@@ -538,6 +538,6 @@ function recordFn () {
         var dataStr = fs.readFileSync('ZRECORD.md').toString();
         return dataStr
     } catch (e) {
-        return `# 这里书写的规则，就是普通的 .md 的规则（内容在 RECORD.md 中修改）`
+        return `# 这里书写的规则，就是普通的 .md 的规则（内容在 ZRECORD.md 中修改）`
     }
 }
