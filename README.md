@@ -101,7 +101,22 @@ npx vpe init
 
 ---
 
+## 第二版功能实现
+
+### 1.基础实现
+
+- [ ] 增加可选的 VuePress社区的配置工作，使之可以使用更好的VuePress能力 [VuePress 社区 官网](https://vuepress.github.io/zh/)
+    - [x] 目前只支持图片缩放插件 vuepress-plugin-zooming（具体可在 vpe.config.json 中进行配置）
+- [ ] 开放更多配置功能
+    - [x] 开放 是否生成覆盖 .vuepress/config.js 的选项，选择false的话，运行 build 或者 serve 就不会 重新覆盖 .vuepress/config.js了（具体可在 vpe.config.json 中进行配置）
+- [ ] 优化代码质量，使之可以更好的拓展
+
+
+---
+
 ## 🎗第一版功能说明
+
+> v1.0.0 --- v1.2.2
 
 ### 1.基础功能实现
 
