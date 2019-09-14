@@ -17,7 +17,7 @@ let dirPath = shelljs.pwd().stdout
 let stat = fs.stat;
 let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成 文件真实对象树
 let vpeConfigObj = getVpeConfig(); // 配置对象
-let configJsText = '' // config.js 内容
+let createConfigJs = getConfig('isCreateConfigJs', true)
 
 // ===================================================
 // ============== ** npm核心命令部分 ** ================
@@ -29,7 +29,7 @@ programConfigFn() // 核心命令行配置函数启动
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.3.0', "-v, --version")
+    program.version('v1.3.1', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -145,8 +145,8 @@ return `{
     // 使用的 图片缩放 插件（目前只支持这一个） "plugin": ["vuepress-plugin-zooming"],
     "plugin": [],
 
-    // 是否重新生成 config.js （因为有时候，如果你更改了 config.js 内容之后，再 npx vpe serve 会发现，config 重新生成了）
-    // 如果选false的话，就会直将 文件夹 && ZHOME.md && ZRECORED.md 复制到 build文件夹下，而不会重新生成 .vuepress/config.js
+    // true：每次 serve build 都会重新 覆盖 build/.vuepress 里面的内容，方便第一次生成配置
+    // false：不会覆盖 build/.vuepress 内容，方便后期的拓展
     "isCreateConfigJs": true,
 
     // 文件夹展示顺序（有需求就进行设置，不仅可以设置需要显示的文件夹，还能设置展示的顺序，这里可能有点绕）
@@ -190,7 +190,8 @@ function createVuePressInit (objTree) {
     createDist() // 创建打包之后的目录
     copyDirFn() // 复制文件
 
-    getConfig('isCreateConfigJs', true) ? createVuePressConfig() : fs.writeFileSync(`${dirPath}/build/.vuepress/config.js`, configJsText); // 根据文件对象树，生成VuePress规则（可选是否生成）
+    if (createConfigJs) createVuePressConfig();
+
     createBasicFile(objTree) // 生成README.md 文件，不写的话会有问题
 }
 
@@ -199,18 +200,15 @@ function createDist () {
 
     // 如果有和打包名称一致的名称，就先删除掉
     if (fs.existsSync(path.join(dirPath, "build"))) {
-
-        // 删除之前首先保存一遍 .vuepress 下面的 config.js 文件内容
-        if (!getConfig('isCreateConfigJs', true)) {
-            configJsText = fs.readFileSync(`${dirPath}/build/.vuepress/config.js`).toString();
-        }
-
         delDir(path.join(dirPath, "build"))
     }
 
     // 创建目录
-    fs.mkdirSync(path.join(dirPath, "build"))
-    fs.mkdirSync(path.join(dirPath, `./build/.vuepress`))
+    if (createConfigJs) {
+        fs.mkdirSync(path.join(dirPath, "build"))
+        fs.mkdirSync(path.join(dirPath, `./build/.vuepress`))
+    }
+    
     console.log('1️⃣  创建打包文件夹成功')
 
 }
@@ -505,13 +503,24 @@ function delDir(path){
         files = fs.readdirSync(path);
         files.forEach((file, index) => {
             let curPath = path + "/" + file;
-            if(fs.statSync(curPath).isDirectory()){
-                delDir(curPath); //递归删除文件夹
+            if(fs.statSync(curPath).isDirectory()) {
+                // /\.vuepress/.test(curPath) ? "" : delDir(curPath) //递归删除文件夹
+                delDir(curPath) //递归删除文件夹
             } else {
-                fs.unlinkSync(curPath); //删除文件
+                if (!createConfigJs && /\.vuepress/.test(path)) {
+                    
+                } else {
+                    fs.unlinkSync(curPath); //删除文件
+                }
             }
         });
-        fs.rmdirSync(path);
+
+        if (!createConfigJs && (/\.vuepress/.test(path) || /build$/.test(path))) {
+            // console.log('path 我不应该被删除', path)
+        } else {
+            // console.log('path 我是被删除', path)
+            fs.rmdirSync(path)
+        }
     }
 }
 
