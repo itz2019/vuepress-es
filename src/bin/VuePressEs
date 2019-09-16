@@ -5,13 +5,6 @@ const shelljs = require('shelljs'); // 前端写shell
 const fs = require('fs');
 const path = require('path');
 
-// 遍历文件的时候是要有黑名单的 ===> .开头的隐藏文件不遍历，node_modules，build 文件夹 不遍历
-// 首先生成 真实文件对象树 用于生成 vpe.config.json
-// 根据 vpe.config.json 生成 规定文件对象树
-
-// 用户没有生成配置文件 vpe.config.json 的情况下，就需要走默认配置
-
-
 // 全局
 let dirPath = shelljs.pwd().stdout
 let stat = fs.stat;
@@ -19,17 +12,16 @@ let dirObjTree = readDirToObjTree() // 遍历所有的文件夹 ---> 生成 文�
 let vpeConfigObj = getVpeConfig(); // 配置对象
 let createConfigJs = getConfig('isCreateConfigJs', true)
 
+
 // ===================================================
 // ============== ** npm核心命令部分 ** ================
 // ===================================================
-
-programConfigFn() // 核心命令行配置函数启动
 
 // 核心命令行配置函数
 function programConfigFn () {
     
     // -v 版本
-    program.version('v1.3.1', "-v, --version")
+    program.version('v1.3.2', "-v, --version")
     // -h 帮助
     program.on('--help', () => { console.log(helpTitleFu()) });
 
@@ -50,7 +42,19 @@ function binHeaderFn (cmd) {
     let binHeader = {
 
         init () {
-            console.log('生成一个初始化项目（功能暂未开放）')
+            try {
+                // 生成 两个文件夹 zhuTest1/zhuTest1-1/zhuTest1.md | zhuTest2/zhuTest2-1/zhuTest2.md
+                fs.mkdirSync('zhuTest1')
+                fs.mkdirSync('zhuTest2')
+                fs.mkdirSync('./zhuTest1/zhuTest1-1')
+                fs.mkdirSync('zhuTest2/zhuTest2-1')
+                fs.writeFileSync('./zhuTest1/zhuTest1-1/zhuTest1.md', "# zhuTest1")
+                fs.writeFileSync('./zhuTest2/zhuTest2-1/zhuTest2.md', "# zhuTest2")
+                shelljs.exec('npx vpe config')
+                shelljs.exec('npx vpe serve')
+            } catch (e) {
+                console.log('😭  出错：你已经生成过初始化项目了...')
+            }
         },
 
         serve () {
@@ -93,10 +97,6 @@ function binHeaderFn (cmd) {
                 createConfigFn()
                 spinner.stop()
             }, 1000)
-        },
-
-        look () {
-            console.log('查看最新版本更新的API（功能暂未开放）')
         }
     
     }
@@ -146,7 +146,7 @@ return `{
     "plugin": [],
 
     // true：每次 serve build 都会重新 覆盖 build/.vuepress 里面的内容，方便第一次生成配置
-    // false：不会覆盖 build/.vuepress 内容，方便后期的拓展
+    // false：不会覆盖 build/.vuepress 内容，方便后期的拓展（为了方便，及时选了false，也会重新生成侧边栏目录和nav配置）
     "isCreateConfigJs": true,
 
     // 文件夹展示顺序（有需求就进行设置，不仅可以设置需要显示的文件夹，还能设置展示的顺序，这里可能有点绕）
@@ -189,9 +189,7 @@ function createFolderShowOrder () {
 function createVuePressInit (objTree) {
     createDist() // 创建打包之后的目录
     copyDirFn() // 复制文件
-
-    if (createConfigJs) createVuePressConfig();
-
+    createConfigJs ? createVuePressConfig() : createConfigHalf();
     createBasicFile(objTree) // 生成README.md 文件，不写的话会有问题
 }
 
@@ -408,6 +406,25 @@ function handlePlugin () {
     return 'vuepress-plugin-zooming'
 }
 
+/**
+ * 创建只更新nav和侧边栏的config.js
+ */
+function createConfigHalf () {
+    // 第一步：获取config.js 里面的对象
+    let [nav, sidebar] = createNavAndSidebar()
+    let resStr = fs.readFileSync('./build/.vuepress/config.js').toString()
+    let resStrRep = resStr.replace('module.exports = ', '')
+    let resData = eval(`(${resStrRep})`)
+    
+    // 第二步：拿到nav和侧边栏的现在数据
+    resData.themeConfig.nav = eval(`([${nav}])`)
+    resData.themeConfig.sidebar = eval(`({${sidebar}})`)
+
+    // 第三步：更新写入
+    let retStr = 'module.exports = ' + JSON.stringify(resData, null, 4)
+    fs.writeFileSync('./build/.vuepress/config.js', retStr)
+}
+
 
 // ===================================================
 // ================= ** 通用函数 ** ===================
@@ -596,3 +613,14 @@ function recordFn () {
         return `# 这里书写的规则，就是普通的 .md 的规则（内容在 ZRECORD.md 中修改）`
     }
 }
+
+
+// 核心命令行配置函数启动
+programConfigFn() 
+
+// 思路梳理
+// 遍历文件的时候是要有黑名单的 ===> .开头的隐藏文件不遍历，node_modules，build 文件夹 不遍历
+// 首先生成 真实文件对象树 用于生成 vpe.config.json
+// 根据 vpe.config.json 生成 规定文件对象树
+
+// 用户没有生成配置文件 vpe.config.json 的情况下，就需要走默认配置

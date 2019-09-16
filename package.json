@@ -1,6 +1,6 @@
 {
   "name": "vuepress-es",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "vuepress-es 可以让你快速使用vuepress，而不需要进行配置",
   "keywords": [
     "vuepress"
